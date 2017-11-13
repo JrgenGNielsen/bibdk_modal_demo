@@ -1,0 +1,134 @@
+<?php
+
+/**
+ * Implements hook_menu
+ */
+function bibdk_modal_demo_menu() {
+  $items['bibdk_modal_demo/ajax'] = array(
+    'page callback' => 'bibdk_modal_demo_ajax',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['bibdk_modal_demo/form'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('bibdk_modal_demo_form'),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['bibdk_modal/bibdk_modal_demo'] = array(
+    'title' => 'bibdk modal demo', // <= Modal header
+    'page callback' => 'bibdk_modal_demo_callback',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+
+/**
+ * Menu callback that returns the user_login form wrapped in a modal
+ * If JavaScript is disabled in the client we will never get here as the login
+ * link is being rewritten by client-side JavaScript.
+ *
+ * If the form hasn't been submitted rendered html will be returned. Otherwise
+ * the output will be returned wrapped in one or more commands to have our
+ * JavaScript handle it client-side.
+ *
+ * @See also: bibdk_modal.forms.inc
+ * @return array|mixed
+ */
+function bibdk_modal_demo_callback() {
+  $form_state = array(
+    'ajax' => TRUE,
+  );
+  $output = bibdk_modal_form_wrapper('bibdk_modal_demo_form', $form_state);
+  $commands = array();
+  if (empty($form_state['executed']) && empty($form_state['submitted'])) {
+    $commands = $output;
+  }
+  elseif (empty($form_state['executed']) && !empty($form_state['submitted'])) {
+    $commands[] = bibdk_modal_command_replace_form($output);
+  }
+  elseif (!empty($form_state['executed']) && !empty($form_state['submitted'])) {
+    $commands[] = bibdk_modal_command_reload();
+    $commands[] = bibdk_modal_command_dismiss();
+  }
+  bibdk_modal_deliver_output($commands);
+}
+
+
+/*
+ * Implements hook_theme
+ */
+function bibdk_modal_demo_theme() {
+  $themes = array(
+    'bibdk_modal_demo' => array(
+      'variables' => array('bibdk_modal_demo_links' => NULL),
+      'template' => 'theme/bibdk-modal-demo-links'
+    ),
+  );
+  return $themes;
+}
+
+
+/**
+ * Implements hook_block_info().
+ */
+function bibdk_modal_demo_block_info() {
+  $blocks['bibdk-modal-demo'] = array(
+      'info' => t('Bibdk modal demo block'),
+      'cache' => DRUPAL_CACHE_PER_PAGE,
+    );
+  return $blocks;
+}
+
+
+/**
+ * Implements hook_block_view().
+ */
+function bibdk_modal_demo_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'bibdk-modal-demo':
+      $block['subject'] = t('bibdk modal demo');
+      $block['content'] = array(
+        '#theme' => 'link',
+        '#text' => 'Bibdk modal demo',
+        '#path' => 'bibdk_modal_demo/form',
+        '#options' => array(
+          'attributes' => array(
+             'title' => 'foo',
+          ),
+          'html' => FALSE,
+        ),
+      );
+      break;
+  }
+  return $block;
+}
+
+
+function bibdk_modal_demo_form($form, &$form_state) {
+  $form = array();
+  $delta = 0;
+  $form["test_field"]["#tree"] = TRUE;
+  $form["test_field"][$delta++] = array(
+        "#type" => "textfield",
+        "#title" => "Input",
+    );
+  $form["actions"]["submit"] = array(
+        "#type" => "submit",
+        "#value" => "Submit",
+    );
+  $form["actions"]["cancel"] = array(
+        "#type" => "submit",
+        "#value" => "Cancel",
+    );
+  return $form;
+}
+
+
+function bibdk_about_author_ajax_get_about_author() {
+  $data['error'] = 'bibdk_modal_demo';
+  drupal_json_output($data);
+}
